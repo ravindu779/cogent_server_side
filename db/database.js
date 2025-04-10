@@ -1,16 +1,24 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
-// Database file will be created at server/db/registrations.db
-const dbPath = path.join(__dirname, 'registrations.db');
+// Ensure the db directory exists
+const dbDir = path.join(__dirname, 'db');
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
 
-const db = new sqlite3.Database(dbPath, (err) => {
+// Database file path
+const dbPath = path.join(dbDir, 'registrations.db');
+
+const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
   if (err) {
     console.error('Database connection error:', err.message);
-  } else {
-    console.log('Connected to SQLite database');
-    initializeDatabase();
+    console.error('Attempted to open database at:', dbPath);
+    throw err; // Crash the app if DB fails (good for debugging)
   }
+  console.log(`Connected to SQLite database at ${dbPath}`);
+  initializeDatabase();
 });
 
 function initializeDatabase() {
@@ -20,7 +28,7 @@ function initializeDatabase() {
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       company TEXT NOT NULL,
-      jobTitle TEXT NOT NULL,
+      jobTitle TEXT,
       phone TEXT,
       message TEXT,
       createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -28,9 +36,9 @@ function initializeDatabase() {
   `, (err) => {
     if (err) {
       console.error('Table creation error:', err.message);
-    } else {
-      console.log('Registrations table ready');
+      throw err;
     }
+    console.log('Registrations table ready');
   });
 }
 
